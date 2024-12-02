@@ -5,7 +5,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DBConnector {
-
     public Connection getConnection() throws SQLException {
         String url = "jdbc:mysql://localhost:3306/web_downloader_db";
         String username = "root";
