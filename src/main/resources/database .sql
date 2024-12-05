@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS `web_downloader_db`;
+-- CREATE DATABASE IF NOT EXISTS `web_downloader_db`;
 
-use `web_downloader_db`;
+-- use `web_downloader_db`;
 CREATE TABLE website (
                          id INT AUTO_INCREMENT PRIMARY KEY,
                          website_name VARCHAR(255) NOT NULL,

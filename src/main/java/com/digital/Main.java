@@ -1,8 +1,12 @@
 package com.digital;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.sql.*;
 import java.util.List;
+
+// test with https://www.newtimes.co.rw
 
 public class Main {
     public static void main(String[] args) {
@@ -44,23 +48,33 @@ public class Main {
                 int websiteId = rs.getInt(1);
 
                 // Step 6: Download and record each link
+                int successfulDownloads = 0; // Counter for successful downloads
                 for (String link : links) {
-                    System.out.println("Downloading: " + link);
+                    System.out.println("Attempting to download: " + link);
                     long linkStartTime = System.currentTimeMillis();
-                    long downloadedKB = FileDownloader.downloadFile(link, saveDir);
-                    long linkEndTime = System.currentTimeMillis();
-                    int elapsedTime = (int) (linkEndTime - linkStartTime);
+                    try {
+                        // Handle relative and absolute URLs properly
+                        String fullLink = URLValidator.resolveFullURL(inputUrl, link);
+                        String fileName = getFileNameFromURL(fullLink); // Get the file name from URL
+                        long downloadedKB = FileDownloader.downloadFile(fullLink, saveDir + File.separator + fileName); // Attempt to download the link
+                        long linkEndTime = System.currentTimeMillis();
+                        int elapsedTime = (int) (linkEndTime - linkStartTime);
 
-                    // Insert link details into the database
-                    String insertLinkSQL = "INSERT INTO link (link_name, website_id, total_elapsed_time, total_downloaded_kilobytes) VALUES (?, ?, ?, ?)";
-                    PreparedStatement linkStmt = conn.prepareStatement(insertLinkSQL);
-                    linkStmt.setString(1, link);
-                    linkStmt.setInt(2, websiteId);
-                    linkStmt.setInt(3, elapsedTime);
-                    linkStmt.setInt(4, (int) downloadedKB);
-                    linkStmt.executeUpdate();
+                        // Insert link details into the database
+                        String insertLinkSQL = "INSERT INTO link (link_name, website_id, total_elapsed_time, total_downloaded_kilobytes) VALUES (?, ?, ?, ?)";
+                        PreparedStatement linkStmt = conn.prepareStatement(insertLinkSQL);
+                        linkStmt.setString(1, link);
+                        linkStmt.setInt(2, websiteId);
+                        linkStmt.setInt(3, elapsedTime);
+                        linkStmt.setInt(4, (int) downloadedKB);
+                        linkStmt.executeUpdate();
 
-                    totalDownloadedKB += downloadedKB;
+                        totalDownloadedKB += downloadedKB;
+                        successfulDownloads++; // Increment on successful download
+                    } catch (Exception e) {
+                        // Log download errors
+                        System.out.println("Failed to download (skipping): " + link);
+                    }
                 }
 
                 // Step 7: Update website details with total elapsed time and downloaded KB
@@ -81,11 +95,19 @@ public class Main {
                 System.out.println("Summary:");
                 System.out.println("Website: " + domainName);
                 System.out.println("Total Links Downloaded: " + links.size());
+                System.out.println("Total Successful Downloads: " + successfulDownloads);
                 System.out.println("Total Downloaded: " + totalDownloadedKB + " KB");
                 System.out.println("Elapsed Time: " + totalElapsedTime + " ms");
             }
-        }catch (Exception e) {
-            System.out.println("Error occured, "+ e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Error occurred: " + e.getMessage());
+        } finally {
+            // Optional: Clean up resources or handle final tasks
         }
+    }
+
+    private static String getFileNameFromURL(String url) throws MalformedURLException {
+        String path = new URL(url).getPath();
+        return path.isEmpty() ? "index.html" : path.substring(path.lastIndexOf('/') + 1);
     }
 }
